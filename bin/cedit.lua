@@ -220,10 +220,8 @@ local function put( x, y, str)
   end
   local fg, fgp = gpu.getForeground()
   local bg, bgp = gpu.getBackground()
-  local i = 1
-  local w = component.gpu.getResolution()
-  w = math.min( w, string.len(str))
-  while i <= w do
+  local i, len = 1, string.len(str)
+  while i <= len do
     if string.find( str, "^%-%-", i) then
 -- comments
       set_hl_color("comment")
@@ -372,7 +370,7 @@ local function setCursor(nbx, nby)
     for by = 1 + scrollY, math.min(h + scrollY, #buffer) do
       local str = unicode.sub(buffer[by], nbx, nbx + dx)
       --str = text.padRight(str, dx)
-      put(1, by - scrollY, str)
+      put(1, by - scrollY, str)			
     end
   end
   term.setCursor(nbx - scrollX, nby - scrollY)
@@ -462,6 +460,7 @@ local function nextword()
   local cbx, cby = getCursor()
   local str = buffer[cby]
   if cbx >= string.len(str) then
+-- move across lines
     cbx = 1
     repeat
       cby = cby + 1
@@ -504,7 +503,7 @@ local function prevword()
         return i
       end
     end
-    return start
+    return 1
   end
   local function skipspace( str, start)
     for i = start, 1, -1 do
@@ -512,12 +511,13 @@ local function prevword()
         return i
       end
     end
-    return start
+    return 1
   end
   local cbx, cby = getCursor()
   local str = buffer[cby]
   local bb, ee = string.find( str, "^%s*")
-  if cbx <= 1 or ee == cbx - 1 then
+  if bb and (cbx <= 1 or ee == cbx - 1) then
+-- move across lines
     repeat
       cby = cby - 1
     until string.len(buffer[cby]) > 0
@@ -530,7 +530,10 @@ local function prevword()
   end
   if string.find( str, "^%s", cbx) then
     cbx = skipspace( str, cbx)
-    cbx = skipword( str, cbx)
+		if string.find( str, "^[%u%l%d_]", cbx) then
+			cbx = skipword( str, cbx)
+		end
+		setCursor( cbx, cby)
   elseif string.find( str, "^%p", cbx) then
     for i = cbx - 1, 1, -1 do
       if string.find( str, "^%s", i) then
@@ -547,8 +550,6 @@ local function prevword()
     cbx = skipspace( str, cbx - 1)
     cbx = skipword( str, cbx)
     setCursor( cbx, cby)
-  else
-    --setCursor( cbx - 1, cby)
   end
 end
 
@@ -925,7 +926,6 @@ do
       table.insert(buffer, line)
       chars = chars + unicode.len(line)
       if #buffer <= h then
-        --component.gpu.set(1, #buffer, line)
         put(1, #buffer, line)
       end
     end
