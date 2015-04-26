@@ -8,15 +8,59 @@ local unicode = require("unicode")
 local term = {}
 local cursorX, cursorY = 1, 1
 local cursorBlink = nil
+local invert_cursor_blink = false
 
 local function toggleBlink()
   if term.isAvailable() then
     cursorBlink.state = not cursorBlink.state
-    if cursorBlink.state then
-      cursorBlink.alt = component.gpu.get(cursorX, cursorY) or cursorBlink.alt
-      component.gpu.set(cursorX, cursorY, string.rep(unicode.char(0x2588), unicode.charWidth(cursorBlink.alt))) -- solid block
+    if invert_cursor_blink then
+      local d = component.gpu.getDepth()
+      if cursorBlink.state then
+        local alt, fg, bg, fgp, bgp = component.gpu.get(cursorX, cursorY)
+        if fg == bg then
+          fg = 0xFFFFFF
+          bg = 0x000000
+        end
+        if fgp == bgp then
+          fgp = 0
+          bgp = 15
+        end        
+        cursorBlink.alt = alt or cursorBlink.alt
+        cursorBlink.altfg = fg or fgp
+        cursorBlink.altbg = bg or bgp
+        cursorBlink.altfgp = fgp or fg
+        cursorBlink.altbgp = bgp or bg
+        if d == 1 then
+          component.gpu.setForeground(cursorBlink.altbg)
+          component.gpu.setBackground(cursorBlink.altfg)
+        elseif d == 4 then
+          component.gpu.setForeground(cursorBlink.altbgp, true)
+          component.gpu.setBackground(cursorBlink.altfgp, true)
+        elseif d == 8 then
+          component.gpu.setForeground(cursorBlink.altbg)
+          component.gpu.setBackground(cursorBlink.altfg)
+        end
+        component.gpu.set(cursorX, cursorY, cursorBlink.alt)
+      else
+        if d == 1 then
+          component.gpu.setForeground(cursorBlink.altfg)
+          component.gpu.setBackground(cursorBlink.altbg)
+        elseif d == 4 then
+          component.gpu.setForeground(cursorBlink.altfgp, true)
+          component.gpu.setBackground(cursorBlink.altbgp, true)
+        elseif d == 8 then
+          component.gpu.setForeground(cursorBlink.altfg)
+          component.gpu.setBackground(cursorBlink.altbg)
+        end
+        component.gpu.set(cursorX, cursorY, cursorBlink.alt)
+      end
     else
-      component.gpu.set(cursorX, cursorY, cursorBlink.alt)
+      if cursorBlink.state then
+        cursorBlink.alt = component.gpu.get(cursorX, cursorY) or cursorBlink.alt
+        component.gpu.set(cursorX, cursorY, string.rep(unicode.char(0x2588), unicode.charWidth(cursorBlink.alt))) -- solid block
+      else
+        component.gpu.set(cursorX, cursorY, cursorBlink.alt)
+      end
     end
   end
 end
@@ -61,6 +105,10 @@ function term.getCursorBlink()
   return cursorBlink ~= nil
 end
 
+function term.setCursorBlinkInvert(enabled)
+  invert_cursor_blink = enabled
+end
+
 function term.setCursorBlink(enabled)
   checkArg(1, enabled, "boolean")
   if enabled then
@@ -68,6 +116,11 @@ function term.setCursorBlink(enabled)
       cursorBlink = {}
       cursorBlink.id = event.timer(0.5, toggleBlink, math.huge)
       cursorBlink.state = false
+      cursorBlink.alt = " "
+      cursorBlink.altfg = 0xFFFFFF
+      cursorBlink.altbg = 0x000000
+      cursorBlink.altfgp = 0
+      cursorBlink.altbgp = 15
     elseif not cursorBlink.state then
       toggleBlink()
     end
