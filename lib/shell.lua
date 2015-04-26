@@ -1,9 +1,36 @@
 local fs = require("filesystem")
 local text = require("text")
 local unicode = require("unicode")
+local serialization = require('serialization')
 
 local shell = {}
-local aliases = {}
+local conf = {}
+conf.aliases = {}
+
+local function loadConfig()
+  local env = {}
+  local result, reason = loadfile('/etc/shell.cfg', 't', env)
+  if result then
+    result, reason = xpcall(result, debug.traceback)
+    if result then
+      return env
+    end
+  end
+  return nil, reason
+end
+
+local function saveConfig(conf)
+  local file, reason = io.open('/etc/shell.cfg', 'w')
+  if not file then
+    return nil, reason
+  end
+  for key, value in pairs(conf) do
+    file:write(tostring(key) .. " = " .. serialization.serialize(value, math.huge) .. "\n")
+  end
+  
+  file:close()
+  return true
+end
 
 -- Cache loaded shells for command execution. This puts the requirement on
 -- shells that they do not keep a global state, since they may be called
@@ -15,6 +42,10 @@ local function getShell()
   local shellName, reason = shell.resolve(shellPath, "lua")
   if not shellName then
     return nil, "cannot resolve shell `" .. shellPath .. "': " .. reason
+  end
+  conf, reason = loadConfig()
+  if not conf then
+    return nil, reason
   end
   if shells[shellName] then
     return shells[shellName]
@@ -76,22 +107,30 @@ end
 -------------------------------------------------------------------------------
 
 function shell.getAlias(alias)
-  return aliases[alias]
+  return conf.aliases[alias]
 end
 
 function shell.setAlias(alias, value)
   checkArg(1, alias, "string")
   checkArg(2, value, "string", "nil")
-  aliases[alias] = value
+  conf.aliases[alias] = value
+  saveConfig(conf)
 end
 
 function shell.aliases()
-  return pairs(aliases)
+  local reson
+  conf, _ = loadConfig()
+  if not conf then
+    return pairs({})
+  end
+  return pairs(conf.aliases)
 end
 
 function shell.resolveAlias(command, args)
   checkArg(1, command, "string")
   checkArg(2, args, "table", "nil")
+  local reson
+  conf, _ = loadConfig()
   args = args or {}
   local program, lastProgram = command, nil
   while true do
