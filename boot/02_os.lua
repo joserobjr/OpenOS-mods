@@ -3,6 +3,34 @@ local event = require("event")
 local fs = require("filesystem")
 local shell = require("shell")
 local unicode = require("unicode")
+local serialization = require('serialization')
+
+local function loadConfig()
+  local env = {}
+  local result, reason = loadfile('/etc/env.cfg', 't', env)
+  if result then
+    result, reason = xpcall(result, debug.traceback)
+    if result then
+      return env
+    end
+  end
+  return nil, reason
+end
+
+local function saveConfig(conf)
+  local file, reason = io.open('/etc/env.cfg', 'w')
+  if not file then
+    return nil, reason
+  end
+  for key, value in pairs(conf) do
+    file:write(tostring(key) .. " = " .. serialization.serialize(value, true) .. "\n")
+  end
+  
+  file:close()
+  return true
+end
+
+local globalenv = loadConfig()
 
 local function env()
   -- copy parent env when first requested; easiest way to keep things
@@ -18,7 +46,12 @@ local function env()
     data.vars = vars
   end
   --]]
-  data.vars = data.vars or {}
+  data.vars = data.vars or {}  
+  for k, v in pairs(globalenv) do
+    if not data.vars[k] then
+      data.vars[k] = v
+    end
+  end
   return data.vars
 end
 
@@ -58,6 +91,30 @@ function os.setenv(varname, value)
   end
 end
 
+function os.exportenv(varname, value)
+  if varname == '#' then
+    return #globalenv
+  elseif varname ~= nil then
+    if value == nil then
+      globalenv[varname] = nil
+      os.setenv(varname, nil)
+      saveConfig(globalenv)
+    else
+      local success, val = pcall(tostring, value)
+      if success then
+        globalenv[varname] = value
+        os.setenv(varname, value)
+        saveConfig(globalenv)
+        return val
+      else
+        return nil, val
+      end
+    end
+  else
+    return globalenv
+  end
+end
+
 function os.remove(...)
   return fs.remove(...)
 end
@@ -85,19 +142,6 @@ function os.tmpname()
     end
   end
 end
-
-os.setenv("EDITOR", "/bin/edit")
-os.setenv("HISTSIZE", "10")
-os.setenv("HOME", "/home")
-os.setenv("IFS", " ")
-os.setenv("MANPATH", "/usr/man:.")
-os.setenv("PAGER", "/bin/more")
-os.setenv("PATH", "/bin:/usr/bin:/home/bin:.")
-os.setenv("PS1", "$PWD# ")
-os.setenv("PWD", "/")
-os.setenv("SHELL", "/bin/sh")
-os.setenv("TMP", "/tmp") -- Deprecated
-os.setenv("TMPDIR", "/tmp")
 
 if computer.tmpAddress() then
   fs.mount(computer.tmpAddress(), os.getenv("TMPDIR") or "/tmp")

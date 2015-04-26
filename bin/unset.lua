@@ -1,9 +1,17 @@
-local args = {...}
+local shell = require("shell")
+
+local args, options = shell.parse(...)
 
 if #args < 1 then
-  print("Usage: unset <varname>[ <varname2> [...]]")
+  print("Usage: unset [-e] <varname>[ <varname2> [...]]")
 else
-  for _, k in ipairs(args) do
-    os.setenv(k, nil)
+  if options.e then
+    for _, k in ipairs(args) do
+      os.exportenv(k, nil)
+    end
+	else
+    for _, k in ipairs(args) do
+      os.setenv(k, nil)
+    end
   end
 end
