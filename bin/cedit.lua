@@ -55,13 +55,14 @@ local function loadConfig()
     deleteLine = {{"control", "delete"}, {"shift", "delete"}},
     newline = {{"enter"}},
     
-    nextword = {{"control", "right"}},
-    prevword = {{"control", "left"}},
-
     save = {{"control", "s"}},
     close = {{"control", "w"}},
     find = {{"control", "f"}},
-    findnext = {{"control", "g"}, {"control", "n"}, {"f3"}}
+    findnext = {{"control", "n"}, {"f3"}},
+		
+    nextword = {{"control", "right"}},
+    prevword = {{"control", "left"}},
+		gotoline = {{"control", "g"}}
   }
   if env.hl_colors then
     -- convert color names to palette indices
@@ -111,6 +112,8 @@ local function loadConfig()
   return env
 end
 
+component.gpu.setForeground(0xFFFFFF)
+component.gpu.setBackground(0x000000)
 term.clear()
 term.setCursorBlinkInvert(true)
 term.setCursorBlink(true)
@@ -320,10 +323,12 @@ local function setCursor(nbx, nby)
     local dy = math.abs(scrollY - sy)
     scrollY = sy
     component.gpu.copy(1, 1 + dy, w, h - dy, 0, -dy)
-    for by = nby - (dy - 1), nby do
-      local str = text.padRight(unicode.sub(buffer[by], 1 + scrollX), w)
-      --component.gpu.set(1, by - scrollY, str)
-      put(1, by - scrollY, str)
+		for by = nby - (dy - 1), nby do      
+			local i = by - scrollY
+			if i >= 1 and i <= h then
+				local str = text.padRight(unicode.sub(buffer[by], 1 + scrollX), w)
+				put(1, by - scrollY, str)
+			end
     end
   elseif ncy < 1 then
     term.setCursorBlink(false)
@@ -332,9 +337,11 @@ local function setCursor(nbx, nby)
     scrollY = sy
     component.gpu.copy(1, 1, w, h - dy, 0, dy)
     for by = nby, nby + (dy - 1) do
-      local str = text.padRight(unicode.sub(buffer[by], 1 + scrollX), w)
-      --component.gpu.set(1, by - scrollY, str)
-      put(1, by - scrollY, str)
+			local i = by - scrollY
+			if i >= 1 and i <= h then
+				local str = text.padRight(unicode.sub(buffer[by], 1 + scrollX), w)
+				put(1, by - scrollY, str)
+			end
     end
   end
   term.setCursor(term.getCursor(), nby - scrollY)
@@ -636,6 +643,48 @@ local function enter()
   setStatus(helpStatusText())
 end
 
+local gotoText = ""
+
+function gotoline()
+  local w, h = getSize()
+  local cx, cy = term.getCursor()
+  local cbx, cby = getCursor()
+  local ibx, iby = cbx, cby
+  while running do
+    term.setCursor(7 + unicode.len(gotoText), h + 1)
+		local str = gotoText
+		if unicode.len(gotoText) > 0 then
+			local num = tonumber(gotoText)
+			if num and (num < 1 or num > #buffer) then
+				str = str .. " -- out of bounds"
+			end
+		end
+		setStatus("Goto: " .. str)
+
+    local _, _, char, code = event.pull("key_down")
+    local handler, name = getKeyBindHandler(code)
+    if name == "newline" then
+			if unicode.len(gotoText) > 0 then
+				local num = tonumber(gotoText)
+				if num and num >= 1 and num <= #buffer then
+					setCursor( 1, num)
+				end
+			end
+      break
+    elseif name == "close" then
+      handler()
+    elseif name == "backspace" then
+      gotoText = unicode.sub(gotoText, 1, -2)
+    elseif not keyboard.isControl(char) then
+			char = unicode.char(char)
+			if string.find( char, "^%d") then
+				gotoText = gotoText .. char
+			end
+    end
+  end
+	setStatus(helpStatusText())
+end
+
 local findText = ""
 
 local function find()
@@ -776,7 +825,11 @@ local keyBindHandlers = {
     findText = ""
     find()
   end,
-  findnext = find
+  findnext = find,
+	gotoline = function()
+		gotoText = ""
+		gotoline()
+	end
 }
 
 getKeyBindHandler = function(code)
