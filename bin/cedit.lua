@@ -368,9 +368,14 @@ local function setCursor(nbx, nby)
     scrollX = sx
     component.gpu.copy(1, 1, w - dx, h, dx, 0)
     for by = 1 + scrollY, math.min(h + scrollY, #buffer) do
-      local str = unicode.sub(buffer[by], nbx, nbx + dx)
+      local str
+      if nbx == 1 then
+        str = unicode.sub(buffer[by], 1, w)
+      else
+        str = unicode.sub(buffer[by], nbx, nbx + dx)
+      end
       --str = text.padRight(str, dx)
-      put(1, by - scrollY, str)			
+      put(1, by - scrollY, str)
     end
   end
   term.setCursor(nbx - scrollX, nby - scrollY)
@@ -530,10 +535,10 @@ local function prevword()
   end
   if string.find( str, "^%s", cbx) then
     cbx = skipspace( str, cbx)
-		if string.find( str, "^[%u%l%d_]", cbx) then
-			cbx = skipword( str, cbx)
-		end
-		setCursor( cbx, cby)
+    if string.find( str, "^[%u%l%d_]", cbx) then
+      cbx = skipword( str, cbx)
+    end
+    setCursor( cbx, cby)
   elseif string.find( str, "^%p", cbx) then
     for i = cbx - 1, 1, -1 do
       if string.find( str, "^%s", i) then
