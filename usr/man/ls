@@ -6,12 +6,20 @@ SYNOPSIS
 
 DESCRIPTION
   List information about the specified files, or the current working directory by default.
+	
+	Default options can be set in LS_OPTIONS environment variable.
 
 OPTIONS
   -a
     do not ignore entries starting with .
   -l
     use a long listing format
+  -s
+    display file sizes
+  -si
+		use 1000 instead of 1024 for size calculations
+	-h
+		human readable file sizes (K, M, G)
   -p
     append / indicator to directories
   -M

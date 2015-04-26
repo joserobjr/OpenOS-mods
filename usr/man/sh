@@ -20,6 +20,8 @@ DESCRIPTION
   will copy all files from `/bin` to `/usr/bin`.
 
   The shell also supports aliases, which can be created using `alias` and removed using `unalias` (or using the `shell` API). For example, `dir` is a standard alias for `ls`.
+  
+  The shell reads settings (including aliases) from "/etc/shell.cfg"
 
 EXAMPLES
   sh

@@ -1,0 +1,19 @@
+NAME
+  unset - removes environment variables
+
+SYNOPSIS
+  unset name
+
+DESCRIPTION
+  Allows removal of environment variables created with the `set` and `export` commands.
+
+OPTIONS
+  -e
+    removes exported environment variables
+
+EXAMPLES
+  unset TMP
+    Removes the `TMP` environment variable.
+    
+  unset -e TMP
+    Removes the exported `TMP` environment variable.
