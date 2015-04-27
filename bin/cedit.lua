@@ -356,16 +356,26 @@ local function scrollup()
   local w, h = getSize()
   local x, y = getCursor()
   local cx, cy = term.getCursor()
-  up(cy)
-  setCursor( x, y - 1)
+  if cy == h then
+    up(cy)
+    setCursor( x, y - 1)
+  else
+    up(cy)
+    setCursor( x, y)
+  end
 end
 
 local function scrolldown()
   local w, h = getSize()
   local x, y = getCursor()
   local cx, cy = term.getCursor()
-  down((h - cy) + 1)
-  setCursor( x, y + 1)
+  if cy == 1 then
+    down(h)
+    setCursor( x, y + 1)
+  else
+    down((h - cy) + 1)
+    setCursor( x, y)
+  end  
 end
 
 local function firstline()
