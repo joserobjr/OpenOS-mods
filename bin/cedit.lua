@@ -7,6 +7,7 @@ local term = require("term")
 local text = require("text")
 local unicode = require("unicode")
 local colors = require("colors")
+local hl = require("highlighter")
 
 if not term.isAvailable() then
   return
@@ -19,7 +20,6 @@ if #args == 0 then
 end
 
 local filename = shell.resolve(args[1])
-
 local readonly = options.r or fs.get(filename) == nil or fs.get(filename).isReadOnly()
 
 if not fs.exists(filename) then
@@ -64,36 +64,25 @@ local function loadConfig()
     prevword = {{"control", "left"}},
     gotoline = {{"control", "g"}}
   }
-  if env.hl_colors then
-    -- convert color names to palette indices
-    for k, v in pairs(env.hl_colors) do
-      local fg = env.hl_colors[k].pal.fg
-      local bg = env.hl_colors[k].pal.bg
-      env.hl_colors[k].pal.fg = colors[fg]
-      env.hl_colors[k].pal.bg = colors[bg]
-    end
-  else
-    env.hl_colors = {
-      number     = { rgb = { fg = 0x9933CC, bg = 0x000000 }, pal = { fg = colors.purple,    bg = colors.black } },
-      keyword    = { rgb = { fg = 0x6899FF, bg = 0x000000 }, pal = { fg = colors.lightblue, bg = colors.black } },
-      ident      = { rgb = { fg = 0xFFFFFF, bg = 0x000000 }, pal = { fg = colors.white,     bg = colors.black } },
-      punct      = { rgb = { fg = 0xCCCCCC, bg = 0x000000 }, pal = { fg = colors.silver,    bg = colors.black } },
-      comment    = { rgb = { fg = 0x336600, bg = 0x000000 }, pal = { fg = colors.green,     bg = colors.black } },
-      string     = { rgb = { fg = 0x33CC33, bg = 0x000000 }, pal = { fg = colors.lime,      bg = colors.black } },
-      vstring    = { rgb = { fg = 0x33CC33, bg = 0x7F7F7F }, pal = { fg = colors.lime,      bg = colors.gray } },
-      find       = { rgb = { fg = 0x000000, bg = 0xFFFF33 }, pal = { fg = colors.black,     bg = colors.yellow } },
-      invalid    = { rgb = { fg = 0xFFFFFF, bg = 0xFF0000 }, pal = { fg = colors.white,     bg = colors.red } },
-      status     = { rgb = { fg = 0xFFFFFF, bg = 0x7F7F7F }, pal = { fg = colors.white,     bg = colors.gray } }
-    }
-  end
-  env.hl_keywords = env.hl_keywords or {
-    ["and"]=true, ["break"]=true, ["do"]=true, ["else"]=true,
-    ["elseif"]=true, ["end"]=true, ["false"]=true, ["for"]=true,
-    ["function"]=true, ["goto"]=true, ["if"]=true, ["in"]=true,
-    ["local"]=true, ["nil"]=true, ["not"]=true, ["or"]=true,
-    ["repeat"]=true, ["return"]=true, ["then"]=true, ["true"]=true,
-    ["until"]=true, ["while"]=true
+  env.colors = env.colors or {
+    find   = { rgb = { fg = 0x000000, bg = 0xFFFF33 }, pal = { fg = "black",     bg = "yellow" } },
+    status = { rgb = { fg = 0xFFFFFF, bg = 0x7F7F7F }, pal = { fg = "white",     bg = "gray" } }
   }
+  -- convert color names to palette indices
+  for k, v in pairs(env.colors) do
+    local fg = env.colors[k].pal.fg
+    local bg = env.colors[k].pal.bg
+    if type(fg) == "string" then
+      env.colors[k].pal.fg = colors[fg]
+    else
+      env.colors[k].pal.fg = fg
+    end
+    if type(bg) == "string" then
+      env.colors[k].pal.bg = colors[bg]
+    else
+      env.colors[k].pal.bg = bg
+    end
+  end
   -- Generate config file if it didn't exist.
   if not config then
     local root = fs.get("/")
@@ -155,24 +144,20 @@ local _oldfg, _oldfgp
 local _oldbg, _oldbgp
 
 local function set_hl_color(tag)
-  local d = component.gpu.getDepth()
-  if d == 1 then
-    local fg, bg
-    if tag == "status" or tag == "find" then
-      fg = 0
-      bg = 1
-    else
-      fg = 1
-      bg = 0
+  if tag == "status" or tag == "find" then
+    local d = component.gpu.getDepth()
+    if d == 1 then
+      component.gpu.setForeground(0)
+      component.gpu.setBackground(1)
+    elseif d == 4 then
+      component.gpu.setForeground( config.colors[tag].pal.fg, true)
+      component.gpu.setBackground( config.colors[tag].pal.bg, true)
+    elseif d == 8 then
+      component.gpu.setForeground( config.colors[tag].rgb.fg)
+      component.gpu.setBackground( config.colors[tag].rgb.bg)
     end
-    component.gpu.setForeground(fg)
-    component.gpu.setBackground(bg)
-  elseif d == 4 then
-    component.gpu.setForeground( config.hl_colors[tag].pal.fg, true)
-    component.gpu.setBackground( config.hl_colors[tag].pal.bg, true)
-  elseif d == 8 then
-    component.gpu.setForeground( config.hl_colors[tag].rgb.fg)
-    component.gpu.setBackground( config.hl_colors[tag].rgb.bg)
+  else
+    hl.set_color(tag)
   end
 end
 
@@ -210,106 +195,6 @@ local function line()
   return buffer[cby]
 end
 
-local function put( x, y, str)
-  local gpu = component.gpu
-  local d = gpu.getDepth()
-  if d == 1 then
-    set_hl_color("ident")
-    gpu.set( x, y, str)
-    return
-  end
-  local fg, fgp = gpu.getForeground()
-  local bg, bgp = gpu.getBackground()
-  local i, len = 1, string.len(str)
-  while i <= len do
-    if string.find( str, "^%-%-", i) then
--- comments
-      set_hl_color("comment")
-      gpu.set( x + i - 1, y,  string.sub( str, i))
-      break
-    end
-    if string.find( str, "^[%u%l_]", i) then
--- keywords and identifiers
-      local start = i
-      i = i + 1
-      local b, e = string.find( str, "^[%u%l%d_]+", i)
-      if b then
-        i = e + 1
-      end
-      local k = string.sub( str, start, i - 1)
-      if config.hl_keywords[k] then
-        set_hl_color("keyword")
-      else
-        set_hl_color("ident")
-      end
-      gpu.set( x + start - 1, y, k)
-    elseif string.find( str, "^%d", i) then
--- numbers
-      local start = i
-      i = i + 1
-      local b, e = string.find( str, "^x%x+", i)
-      if not b then
-        b, e = string.find( str, "^%d*%.?%d*", i)
-      end
-      if b then
-        i = e + 1
-      end
-      local k = string.sub( str, start, i - 1)
-      set_hl_color("number")
-      gpu.set( x + start - 1, y, k)
-    elseif string.find( str, "^[\"']", i) then
--- strings
-      local q = "^" .. string.sub( str, i, i)
-      local start = i
-      i = i + 1
-      while i <= str:len() do
-        if string.find( str, q, i) then
-          break
-        elseif string.find( str, "^\\", i) then
-          i = i + 1
-        end
-        i = i + 1
-      end 
-      i = i + 1
-      local k = string.sub( str, start, i - 1)
-      set_hl_color("string")
-      gpu.set( x + start - 1, y, k)
-    elseif string.find( str, "^%[%[", i) then
--- verbatim strings
-      local start = i
-      i = i + 2
-      local b, e = string.find( str, "%]%]", i)
-      if e then
-        i = e + 1
-      end
-      local k = string.sub( str, start, i)
-      set_hl_color("vstring")
-      gpu.set( x + start - 1, y, k)
-    elseif string.find( str, "^[%p%s]", i) then
--- whitespace & punctuation
-      local b, e = string.find( str, "^[%p%s]+", i)
-      i = e + 1
-      -- dont allow string and comment starters at end
-      for ii = b, e do
-        if string.find( str, "^['\"]", ii) or string.find( str, "^%[%[", ii) or string.find( str, "^%-%-", ii) then
-          i = ii
-          e = ii - 1
-          break
-        end
-      end
-      set_hl_color("punct")
-      gpu.set( x + b - 1, y, string.sub( str, b, e))
-    else
--- invalid characters
-      set_hl_color("invalid")
-      gpu.set( x + i - 1, y, string.sub( str, i, i))
-      i = i + 1
-    end    
-  end
-  gpu.setForeground(fg, fgp)
-  gpu.setBackground(bg, bgp)
-end
-
 local function setCursor(nbx, nby)
   local w, h = getSize()
   nby = math.max(1, math.min(#buffer, nby))
@@ -328,7 +213,7 @@ local function setCursor(nbx, nby)
     end
     for by = b, nby do      
       local str = text.padRight(unicode.sub(buffer[by], 1 + scrollX), w)
-      put(1, by - scrollY, str)
+      hl.put(1, by - scrollY, str)
     end
   elseif ncy < 1 then
     term.setCursorBlink(false)
@@ -343,7 +228,7 @@ local function setCursor(nbx, nby)
     end
     for by = nby, e do
       local str = text.padRight(unicode.sub(buffer[by], 1 + scrollX), w)
-      put(1, by - scrollY, str)
+      hl.put(1, by - scrollY, str)
     end
   end
   term.setCursor(term.getCursor(), nby - scrollY)
@@ -359,7 +244,7 @@ local function setCursor(nbx, nby)
     for by = 1 + scrollY, math.min(h + scrollY, #buffer) do
       local str = unicode.sub(buffer[by], nbx - (dx - 1), nbx)
       str = text.padRight(str, dx)
-      put(1 + (w - dx), by - scrollY, str)
+      hl.put(1 + (w - dx), by - scrollY, str)
     end
   elseif ncx < 1 then
     term.setCursorBlink(false)
@@ -375,7 +260,7 @@ local function setCursor(nbx, nby)
         str = unicode.sub(buffer[by], nbx, nbx + dx)
       end
       --str = text.padRight(str, dx)
-      put(1, by - scrollY, str)
+      hl.put(1, by - scrollY, str)
     end
   end
   term.setCursor(nbx - scrollX, nby - scrollY)
@@ -402,7 +287,7 @@ local function highlight(bx, by, length, enabled)
     component.gpu.setBackground(bg, bgp)
   else
     local str = text.padRight(unicode.sub(buffer[by], 1 + scrollX), w)
-    put(1, cy, str)
+    hl.put(1, cy, str)
   end
 end
 
@@ -568,7 +453,7 @@ local function delete(fullRow)
     if rcy <= h then
       component.gpu.copy(1, rcy + 1, w, h - rcy, 0, -1)
       --component.gpu.set(1, h, text.padRight(buffer[row + (h - rcy)], w))
-      put(1, h, text.padRight(buffer[row + (h - rcy)], w))
+      hl.put(1, h, text.padRight(buffer[row + (h - rcy)], w))
     end
     return content
   end
@@ -593,14 +478,14 @@ local function delete(fullRow)
     end
     --component.gpu.set(w, cy, char)
     local str = text.padRight(unicode.sub(buffer[cby], 1 + scrollX), w)
-    put(1, cy, str)
+    hl.put(1, cy, str)
   elseif cby < #buffer then
     term.setCursorBlink(false)
     local append = deleteRow(cby + 1)
     buffer[cby] = buffer[cby] .. append
     --component.gpu.set(cx, cy, append)
     local str = text.padRight(unicode.sub(buffer[cby], 1 + scrollX), w)
-    put(1, cy, str)
+    hl.put(1, cy, str)
   else
     return
   end
@@ -625,7 +510,7 @@ local function insert(value)
   end
   --component.gpu.set(cx, cy, value)
   local str = text.padRight(unicode.sub(buffer[cby], 1 + scrollX), w)
-  put(1, cy, str)
+  hl.put(1, cy, str)
   right(len)
   setStatus(helpStatusText())
 end
@@ -644,7 +529,7 @@ local function enter()
     end
     --component.gpu.set(1, cy + 1, text.padRight(buffer[cby + 1], w))
     local str = text.padRight(unicode.sub(buffer[cby + 1], 1 + scrollX), w)
-    put(1, cy + 1, str)
+    hl.put(1, cy + 1, str)
   end
   setCursor(1, cby + 1)
   setStatus(helpStatusText())
@@ -917,7 +802,7 @@ local function onScroll(direction)
 end
 
 -------------------------------------------------------------------------------
-
+hl.reload()
 do
   local f = io.open(filename)
   if f then
@@ -931,7 +816,7 @@ do
       table.insert(buffer, line)
       chars = chars + unicode.len(line)
       if #buffer <= h then
-        put(1, #buffer, line)
+        hl.put(1, #buffer, line)
       end
     end
     f:close()

@@ -1,0 +1,18 @@
+NAME
+  hl - syntax highlight file (or input) to output
+
+SYNOPSIS
+  hl [OPTION]... [FILE]...
+
+DESCRIPTION
+  Syntax highlights Lua code to output.
+
+OPTIONS
+  -w
+    Wrap lines on that are longer than screen width
+  -m
+    Wait for key-press after a full screen
+
+EXAMPLES
+  hl file.lua
+    Displays file.lua syntax highlighted
