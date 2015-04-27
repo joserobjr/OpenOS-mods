@@ -17,10 +17,14 @@ cedit - syntax highlighting editor:
     reads keybindings and ui colors from /etc/cedit.cfg
     needs updated /bin/term.lua for inverted blinking cursor.
     needs new /lib/highlighter.lua for syntax highlighting.
-    new keyboard shortcuts:
+    new keybindings:
       ctrl + g    = goto line
       ctrl + left = goto previous word/punct
       ctrl + next = goto next word/punct
+      ctrl + home = goto top line
+      ctrl + end  = goto last line
+      ctrl + up   = scoll up one line, with cursor in-place
+      ctrl + down = scroll down one line, with cursor in-place
 
 hl - syntax highlighting more:
 
