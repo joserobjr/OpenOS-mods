@@ -83,7 +83,6 @@ else
           term.write("\n")
         end
       end
-      num = num + 1
       if options.m and num >= h - 1 then
         term.write(":")
         term.setCursorBlink(true)
