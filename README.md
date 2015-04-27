@@ -3,13 +3,14 @@ Modifications and additions to OpenComputers OpenOS
 
 Noteable changes:
 
-    Persistence of aliases.  
-    Persistence of environment variables.  
-    File size switches for ls command.  
+    Persistence of aliases.
+    Persistence of environment variables.
+    File size switches for ls command.
+    Reset color switch to clear command.
     Syntax highlighter library.
-    Syntax highlighting version of /bin/edit.lua (cedit).  
-    Syntax highlighting version of /bin/more.lua (hl).  
-    Inverted blinking cursor to term (for cedit).  
+    Syntax highlighting version of /bin/edit.lua (cedit).
+    Syntax highlighting version of /bin/more.lua (hl).
+    Inverted blinking cursor to term (for cedit).
 
 Installation:
 
