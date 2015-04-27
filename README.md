@@ -1,12 +1,6 @@
 # OpenOS-mods
 Modifications and additions to OpenComputers OpenOS
 
-Installation:
-
-    Copy files into an allready existing copy of OpenOS, usualy located in
-      "%APPDATA%\Roaming\.minecraft\saves\YOUT_WORLD_NAME\opencomputers\YOUR_MAIN_HD"
-    where YOUR_WORLD_NAME is the name of your world and YOUR_MAIN_HD is the full address of your main hd.
-
 Noteable changes:
 
     Persistence of aliases.  
@@ -17,6 +11,11 @@ Noteable changes:
     Syntax highlighting version of /bin/more.lua (hl).  
     Inverted blinking cursor to term (for cedit).  
 
+Installation:
+
+    Copy files into an allready existing copy of OpenOS, usualy located in
+      "%APPDATA%\Roaming\.minecraft\saves\YOUT_WORLD_NAME\opencomputers\YOUR_MAIN_HD"
+    where YOUR_WORLD_NAME is the name of your world and YOUR_MAIN_HD is the full address of your main hd.
 
 cedit - syntax highlighting editor:
 
