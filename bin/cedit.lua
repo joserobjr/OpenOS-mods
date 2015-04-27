@@ -62,7 +62,13 @@ local function loadConfig()
     
     nextword = {{"control", "right"}},
     prevword = {{"control", "left"}},
-    gotoline = {{"control", "g"}}
+    gotoline = {{"control", "g"}},
+    
+    firstline = {{"control", "home"}},
+    lastline = {{"control", "end"}},
+
+    scrollup = {{"control", "up"}},
+    scrolldown = {{"control", "down"}}
   }
   env.colors = env.colors or {
     find   = { rgb = { fg = 0x000000, bg = 0xFFFF33 }, pal = { fg = "black",     bg = "yellow" } },
@@ -344,6 +350,30 @@ local function down(n)
       ende()
     end
   end
+end
+
+local function scrollup()
+  local w, h = getSize()
+  local x, y = getCursor()
+  local cx, cy = term.getCursor()
+  up(cy)
+  setCursor( x, y - 1)
+end
+
+local function scrolldown()
+  local w, h = getSize()
+  local x, y = getCursor()
+  local cx, cy = term.getCursor()
+  down((h - cy) + 1)
+  setCursor( x, y + 1)
+end
+
+local function firstline()
+  setCursor( 1, 1)
+end
+
+local function lastline()
+  setCursor( 1, #buffer)
 end
 
 local function nextword()
@@ -721,7 +751,11 @@ local keyBindHandlers = {
   gotoline = function()
     gotoText = ""
     gotoline()
-  end
+  end,
+  firstline = firstline,
+  lastline = lastline,
+  scrollup = scrollup,
+  scrolldown = scrolldown
 }
 
 getKeyBindHandler = function(code)
@@ -838,7 +872,21 @@ do
 end
 
 
+local gpua = component.gpu.address
 while running do
+  local tgpua = component.gpu.address
+  if gpua ~= tgpua then
+    local w, h = component.gpu.getResolution()
+    local cx, cy = getCursor()
+    component.gpu.setForeground( colors.white, true)
+    component.gpu.setBackground( colors.black, true)
+    term.clearScreen()
+    for i = scrollY, scrollY + h -1 do
+      hl.put( 1, i - scrollY, buffer[i])
+    end
+    setStatus(getStatusText())
+    setCursor(cx,cy)
+  end
   local event, address, arg1, arg2, arg3 = event.pull()
   if type(address) == "string" and component.isPrimary(address) then
     local blink = true
