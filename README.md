@@ -5,8 +5,8 @@ Noteable changes:
 
     Persistence of aliases.
     Persistence of environment variables.
-    File size switches for ls command.
-    Reset color switch to clear command.
+    File size switches for ls command (-s -h -si).
+    Reset color switch to clear command (-c).
     Syntax highlighter library.
     Syntax highlighting version of /bin/edit.lua (cedit).
     Syntax highlighting version of /bin/more.lua (hl).
