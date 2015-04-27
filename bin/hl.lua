@@ -40,11 +40,11 @@ if #args == 0 then
         read = string.sub( read, 1, -2)
       end
       if string.len(read) > 0 then
-        hl.line( read, options.w)
+        num = num + hl.line( read, options.w)
       else
+        num = num + 1
         term.write("\n")
-      end
-      num = num + 1
+      end      
       if options.m and num >= h - 1 then
         term.write(":")
         term.setCursorBlink(true)      
@@ -77,8 +77,9 @@ else
           line = string.sub( line, 1, -2)
         end
         if string.len(line) > 0 then
-          hl.line( line, options.w)
+          num = num + hl.line( line, options.w)
         else
+          num = num + 1
           term.write("\n")
         end
       end

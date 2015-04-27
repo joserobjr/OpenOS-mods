@@ -71,8 +71,8 @@ local function loadConfig()
 end
 
 function hl.reload()
-	config = {}
-	config = loadConfig()
+  config = {}
+  config = loadConfig()
 end
 
 function hl.set_color(tag)
@@ -189,6 +189,7 @@ function hl.put( x, y, str)
   gpu.setBackground(bg, bgp)
 end
 
+-- returns number of lines outputted
 function hl.line( str, wrap)
   local w, h = component.gpu.getResolution()
   local cx, cy = term.getCursor()
@@ -197,7 +198,9 @@ function hl.line( str, wrap)
     hl.put( cx, cy, str)
     term.setCursor( cx + unicode.len(str), cy)
     term.write("\n")
+    return 1
   elseif wrap and wrap == true then
+    local count = 0
     while unicode.len(str) > 0 do
       -- +-8=length of largest keyword, for highlighting tokens split on screen border
       local ww = math.min( w + 8, unicode.len(str))
@@ -216,12 +219,15 @@ function hl.line( str, wrap)
       term.write("\n")
       cx, cy = term.getCursor()
       cx = -8
+      count = count + 1
     end
+    return count
   else
     local ww = math.min( w + 8, unicode.len(str))
     hl.put( cx, cy, unicode.sub( str, 1, ww))
     term.setCursor( cx + ww, cy)
     term.write("\n")
+    return 1
   end
 end
 
