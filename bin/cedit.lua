@@ -872,21 +872,7 @@ do
 end
 
 
-local gpua = component.gpu.address
 while running do
-  local tgpua = component.gpu.address
-  if gpua ~= tgpua then
-    local w, h = component.gpu.getResolution()
-    local cx, cy = getCursor()
-    component.gpu.setForeground( colors.white, true)
-    component.gpu.setBackground( colors.black, true)
-    term.clearScreen()
-    for i = scrollY, scrollY + h -1 do
-      hl.put( 1, i - scrollY, buffer[i])
-    end
-    setStatus(getStatusText())
-    setCursor(cx,cy)
-  end
   local event, address, arg1, arg2, arg3 = event.pull()
   if type(address) == "string" and component.isPrimary(address) then
     local blink = true
