@@ -74,6 +74,10 @@ local function loadConfig()
     find   = { rgb = { fg = 0x000000, bg = 0xFFFF33 }, pal = { fg = "black",     bg = "yellow" } },
     status = { rgb = { fg = 0xFFFFFF, bg = 0x7F7F7F }, pal = { fg = "white",     bg = "gray" } }
   }
+  env.scroll = env.scroll or {
+    caret_inplace = true,
+    num_lines = 5
+  }
   -- convert color names to palette indices
   for k, v in pairs(env.colors) do
     local fg = env.colors[k].pal.fg
@@ -352,29 +356,45 @@ local function down(n)
   end
 end
 
-local function scrollup()
+local function scrollup(n)
   local w, h = getSize()
   local x, y = getCursor()
   local cx, cy = term.getCursor()
+  n = n or 1
   if cy == h then
-    up(cy)
-    setCursor( x, y - 1)
+    up(h + (n - 1))
+    setCursor( x, y - n)
   else
-    up(cy)
-    setCursor( x, y)
+    up(cy + (n - 1))
+    if config.scroll.caret_inplace then
+      if y > scrollY + h then
+        y = scrollY + h
+      end
+      setCursor( x, y)
+    else
+      setCursor( x, y - n)
+    end
   end
 end
 
-local function scrolldown()
+local function scrolldown(n)
   local w, h = getSize()
   local x, y = getCursor()
   local cx, cy = term.getCursor()
+  n = n or 1
   if cy == 1 then
-    down(h)
-    setCursor( x, y + 1)
+    down(h + (n - 1))
+    setCursor( x, y + n)
   else
-    down((h - cy) + 1)
-    setCursor( x, y)
+    down((h - cy) + n)
+    if config.scroll.caret_inplace then
+      if y <= scrollY then
+        y = scrollY + 1
+      end
+      setCursor( x, y)
+    else
+      setCursor( x, y + n)
+    end
   end  
 end
 
@@ -842,7 +862,11 @@ end
 
 local function onScroll(direction)
   local cbx, cby = getCursor()
-  setCursor(cbx, cby - direction * 12)
+  if direction < 0 then
+    scrolldown( math.abs(direction) * config.scroll.num_lines)
+  else
+    scrollup( direction * config.scroll.num_lines)
+  end
 end
 
 -------------------------------------------------------------------------------
