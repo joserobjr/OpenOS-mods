@@ -23,7 +23,7 @@ Installation:
 cedit - syntax highlighting editor:
 
     reads keybindings and ui colors from /etc/cedit.cfg
-    needs updated /bin/term.lua for inverted blinking cursor.
+    needs updated /lib/term.lua for inverted blinking cursor.
     needs new /lib/highlighter.lua for syntax highlighting.
     new keybindings:
       ctrl + g    = goto line
