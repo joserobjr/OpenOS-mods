@@ -78,6 +78,7 @@ local function loadConfig()
     caret_inplace = true,
     num_lines = 5
   }
+  env.ask_save_on_exit = env.ask_save_on_exit or true
   -- convert color names to palette indices
   for k, v in pairs(env.colors) do
     local fg = env.colors[k].pal.fg
@@ -595,6 +596,31 @@ local function enter()
   setStatus(helpStatusText())
 end
 
+local inSaveonexit
+
+function saveonexit()
+  if inSaveonexit then
+    return false
+  end
+  inSaveonexit = true
+  while running do
+    setStatus("File has changed, save before exit? [Y/N]: ")
+    local _, _, char, code = event.pull("key_down")
+    local handler, name = getKeyBindHandler(code)
+    if name == "close" then
+      handler()
+    elseif not keyboard.isControl(char) then
+      char = unicode.char(char)
+      if char == "y" or char == "Y" then
+        return true
+      elseif char == "n" or char == "N" then
+        return false
+      end
+    end
+  end
+  return false
+end
+
 local gotoText = ""
 
 function gotoline()
@@ -770,7 +796,9 @@ local keyBindHandlers = {
     end
   end,
   close = function()
-    -- TODO ask to save if changed
+    if config.ask_save_on_exit and saveonexit() then
+      keyBindHandlers.save()
+    end
     running = false
   end,
   find = function()
