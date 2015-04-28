@@ -1,5 +1,5 @@
 # OpenOS-mods
-Modifications and additions to OpenComputers OpenOS
+Modifications and additions to [OpenOS](https://github.com/MightyPirates/OpenComputers/tree/master-MC1.8/src/main/resources/assets/opencomputers/loot/OpenOS) that comes with a Minecraft mod called  [OpenComputers](https://github.com/MightyPirates/OpenComputers/tree/master-MC1.8)  
 
 Noteable changes:
 
