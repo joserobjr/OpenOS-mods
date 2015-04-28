@@ -68,7 +68,9 @@ local function loadConfig()
     lastline = {{"control", "end"}},
 
     scrollup = {{"control", "up"}},
-    scrolldown = {{"control", "down"}}
+    scrolldown = {{"control", "down"}},
+    
+    dupeline = {{"control", "d"}}
   }
   env.colors = env.colors or {
     find   = { rgb = { fg = 0x000000, bg = 0xFFFF33 }, pal = { fg = "black",     bg = "yellow" } },
@@ -123,6 +125,7 @@ local running = true
 local buffer = {}
 local scrollX, scrollY = 0, 0
 local config = loadConfig()
+local changed = false
 
 local getKeyBindHandler -- forward declaration for refind()
 
@@ -514,7 +517,6 @@ local function delete(fullRow)
     local rcy = cy + (row - cby)
     if rcy <= h then
       component.gpu.copy(1, rcy + 1, w, h - rcy, 0, -1)
-      --component.gpu.set(1, h, text.padRight(buffer[row + (h - rcy)], w))
       hl.put(1, h, text.padRight(buffer[row + (h - rcy)], w))
     end
     return content
@@ -538,20 +540,19 @@ local function delete(fullRow)
     if not char or unicode.len(char) == 0 then
       char = " "
     end
-    --component.gpu.set(w, cy, char)
     local str = text.padRight(unicode.sub(buffer[cby], 1 + scrollX), w)
     hl.put(1, cy, str)
   elseif cby < #buffer then
     term.setCursorBlink(false)
     local append = deleteRow(cby + 1)
     buffer[cby] = buffer[cby] .. append
-    --component.gpu.set(cx, cy, append)
     local str = text.padRight(unicode.sub(buffer[cby], 1 + scrollX), w)
     hl.put(1, cy, str)
   else
     return
   end
   setStatus(helpStatusText())
+  changed = true
 end
 
 local function insert(value)
@@ -575,6 +576,7 @@ local function insert(value)
   hl.put(1, cy, str)
   right(len)
   setStatus(helpStatusText())
+  changed = true
 end
 
 local function enter()
@@ -595,31 +597,51 @@ local function enter()
   end
   setCursor(1, cby + 1)
   setStatus(helpStatusText())
+  changed = true
 end
 
-local inSaveonexit
+local function dupeline()
+  local s = line()
+  ende()
+  enter()
+  insert(s)
+  home()
+end
 
 function saveonexit()
-  if inSaveonexit then
-    return false
-  end
-  inSaveonexit = true
+  local w, h = getSize()
+  local cx, cy = getCursor()
   while running do
-    setStatus("File has changed, save before exit? [Y/N]: ")
+    local str = "File has changed, save before exit?"
+    local opt = " [Y/N]"
+    term.setCursor( string.len(str) + string.len(opt) + 3, h + 1)
+    setStatus(str)    
+    local fg = component.gpu.setForeground( colors.red, true)
+    local bg = component.gpu.setBackground( config.colors.status.pal.bg, true)
+    component.gpu.set( string.len(str) + 1, h + 1, opt)
+    component.gpu.setForeground( config.colors.status.pal.fg, true)
+    component.gpu.set( string.len(str) + 1 + string.len(opt), h + 1, ":")
+    component.gpu.setForeground(fg)
+    component.gpu.setBackground(bg)
+    
     local _, _, char, code = event.pull("key_down")
     local handler, name = getKeyBindHandler(code)
-    if name == "close" then
-      handler()
+    if name == "newline" then
+      break
+    elseif name == "close" then
+      return "nosave"
     elseif not keyboard.isControl(char) then
       char = unicode.char(char)
       if char == "y" or char == "Y" then
-        return true
+        return "save"
       elseif char == "n" or char == "N" then
-        return false
+        return "nosave"
       end
     end
   end
-  return false
+  setStatus(helpStatusText())
+  setCursor( cx, cy)
+  return "cancel"
 end
 
 local gotoText = ""
@@ -631,14 +653,19 @@ function gotoline()
   local ibx, iby = cbx, cby
   while running do
     term.setCursor(7 + unicode.len(gotoText), h + 1)
-    local str = gotoText
+    local ok = false
     if unicode.len(gotoText) > 0 then
       local num = tonumber(gotoText)
       if num and (num < 1 or num > #buffer) then
-        str = str .. " -- out of bounds!"
+        ok = true
       end
     end
-    setStatus("Goto: " .. str)
+    setStatus("Goto: " .. gotoText)    
+    if ok and unicode.len(gotoText) > 0 then
+      local fg = component.gpu.setForeground( colors.red, true)
+      component.gpu.set( 7 + unicode.len(gotoText) + 1, h + 1,  " -- out of bounds!")
+      component.gpu.setForeground(fg)
+    end
 
     local _, _, char, code = event.pull("key_down")
     local handler, name = getKeyBindHandler(code)
@@ -696,10 +723,11 @@ local function find()
       end
     end
     term.setCursor(7 + unicode.len(findText), h + 1)
-    if found or unicode.len(findText) == 0 then
-      setStatus("Find: " .. findText)
-    else
-      setStatus("Find: " .. findText .. " -- no match found!")
+    setStatus("Find: " .. findText)
+    if not found and unicode.len(findText) > 0 then
+      local fg component.gpu.setForeground( colors.red, true)
+      component.gpu.set( 7 + unicode.len(findText) + 1, h + 1,  " -- no match found!")
+      component.gpu.setForeground(fg)
     end
 
     local _, _, char, code = event.pull("key_down")
@@ -797,6 +825,7 @@ local keyBindHandlers = {
         format = [["%s" %dL,%dC written]]
       end
       setStatus(string.format(format, fs.name(filename), #buffer, chars))
+      changed = false
     else
       setStatus(reason)
     end
@@ -805,10 +834,19 @@ local keyBindHandlers = {
     end
   end,
   close = function()
-    if config.ask_save_on_exit and saveonexit() then
-      keyBindHandlers.save()
+    if changed and config.ask_save_on_exit then
+      local x = saveonexit()
+      if x == "save" then
+        keyBindHandlers.save()
+        running = false
+      elseif x == "nosave" then
+        running = false
+      elseif x == "cancel" then
+        -- dont do anything
+      end
+    else
+      running = false
     end
-    running = false
   end,
   find = function()
     findText = ""
@@ -822,7 +860,8 @@ local keyBindHandlers = {
   firstline = firstline,
   lastline = lastline,
   scrollup = scrollup,
-  scrolldown = scrolldown
+  scrolldown = scrolldown,
+  dupeline = dupeline
 }
 
 getKeyBindHandler = function(code)
@@ -894,7 +933,10 @@ local function onClipboard(value)
 end
 
 local function onClick(x, y)
-  setCursor(x + scrollX, y + scrollY)
+  local w, h = getSize()
+  if y <= h then
+    setCursor(x + scrollX, y + scrollY)
+  end
 end
 
 local function onScroll(direction)
