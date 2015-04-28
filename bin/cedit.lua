@@ -56,7 +56,7 @@ local function loadConfig()
     newline = {{"enter"}},
     
     save = {{"control", "s"}},
-    close = {{"control", "w"}},
+    close = {{"control", "q"}, {"control", "w"}},
     find = {{"control", "f"}},
     findnext = {{"control", "n"}, {"f3"}},
     
@@ -147,7 +147,8 @@ local function helpStatusText()
   end
   return prettifyKeybind("Save", "save") ..
          prettifyKeybind("Close", "close") ..
-         prettifyKeybind("Find", "find")
+         prettifyKeybind("Find", "find") .. 
+         prettifyKeybind("Goto", "gotoline")
 end
 
 -------------------------------------------------------------------------------
@@ -634,7 +635,7 @@ function gotoline()
     if unicode.len(gotoText) > 0 then
       local num = tonumber(gotoText)
       if num and (num < 1 or num > #buffer) then
-        str = str .. " -- out of bounds"
+        str = str .. " -- out of bounds!"
       end
     end
     setStatus("Goto: " .. str)
@@ -647,6 +648,8 @@ function gotoline()
         if num and num >= 1 and num <= #buffer then
           setCursor( 1, num)
         end
+      else
+        setCursor( cbx, cby)
       end
       break
     elseif name == "close" then
@@ -671,27 +674,33 @@ local function find()
   local cbx, cby = getCursor()
   local ibx, iby = cbx, cby
   while running do
+    local found = false
     if unicode.len(findText) > 0 then
       local sx, sy
       for syo = 1, #buffer do -- iterate lines with wraparound
         sy = (iby + syo - 1 + #buffer - 1) % #buffer + 1
-        sx = string.find(buffer[sy], findText, syo == 1 and ibx or 1)
+        sx = string.find(buffer[sy], findText, syo == 1 and ibx or 1, true)
         if sx and (sx >= ibx or syo > 1) then
           break
         end
       end
       if not sx then -- special case for single matches
         sy = iby
-        sx = string.find(buffer[sy], findText)
+        sx = string.find(buffer[sy], findText, 1, true)
       end
       if sx then
         cbx, cby = sx, sy
         setCursor(cbx, cby)
         highlight(cbx, cby, unicode.len(findText), true)
+        found = true
       end
     end
     term.setCursor(7 + unicode.len(findText), h + 1)
-    setStatus("Find: " .. findText)
+    if found or unicode.len(findText) == 0 then
+      setStatus("Find: " .. findText)
+    else
+      setStatus("Find: " .. findText .. " -- no match found!")
+    end
 
     local _, _, char, code = event.pull("key_down")
     local handler, name = getKeyBindHandler(code)
