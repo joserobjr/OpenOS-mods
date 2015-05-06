@@ -27,6 +27,7 @@ cedit - syntax highlighting editor:
     needs new /lib/highlighter.lua for syntax highlighting.
     new keybindings:
       ctrl + g    = goto line
+      ctrl + d    = duplicate line
       ctrl + left = goto previous word/punct
       ctrl + next = goto next word/punct
       ctrl + home = goto top line
