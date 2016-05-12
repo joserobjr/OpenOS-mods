@@ -834,21 +834,6 @@ local keyBindHandlers = {
       fs.remove(backup)
     end
   end,
-  close = function()
-    if changed and config.ask_save_on_exit then
-      local x = saveonexit()
-      if x == "save" then
-        keyBindHandlers.save()
-        running = false
-      elseif x == "nosave" then
-        running = false
-      elseif x == "cancel" then
-        -- dont do anything
-      end
-    else
-      running = false
-    end
-  end,
   find = function()
     findText = ""
     find()
@@ -864,6 +849,22 @@ local keyBindHandlers = {
   scrolldown = scrolldown,
   dupeline = dupeline
 }
+
+function keyBindHandlers.close()
+    if changed and config.ask_save_on_exit then
+      local x = saveonexit()
+      if x == "save" then
+        keyBindHandlers.save()
+        running = false
+      elseif x == "nosave" then
+        running = false
+      elseif x == "cancel" then
+        -- dont do anything
+      end
+    else
+      running = false
+    end
+  end
 
 getKeyBindHandler = function(code)
   if type(config.keybinds) ~= "table" then return end
