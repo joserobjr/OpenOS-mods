@@ -726,7 +726,7 @@ local function find()
     invertedblink.setCursor(7 + unicode.len(findText), h + 1)
     setStatus("Find: " .. findText)
     if not found and unicode.len(findText) > 0 then
-      local fg component.gpu.setForeground( colors.red, true)
+      local fg = component.gpu.setForeground( colors.red, true)
       component.gpu.set( 7 + unicode.len(findText) + 1, h + 1,  " -- no match found!")
       component.gpu.setForeground(fg)
     end
