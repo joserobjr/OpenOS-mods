@@ -4,6 +4,7 @@ local fs = require("filesystem")
 local keyboard = require("keyboard")
 local shell = require("shell")
 local term = require("term")
+local invertedblink = require("invertedblink")
 local text = require("text")
 local unicode = require("unicode")
 local colors = require("colors")
@@ -117,8 +118,8 @@ end
 component.gpu.setForeground(0xFFFFFF)
 component.gpu.setBackground(0x000000)
 term.clear()
-term.setCursorBlinkInvert(true)
-term.setCursorBlink(true)
+invertedblink.setCursorBlinkInvert(true)
+invertedblink.setCursorBlink(true)
 
 
 local running = true
@@ -216,7 +217,7 @@ local function setCursor(nbx, nby)
 
   local ncy = nby - scrollY
   if ncy > h then
-    term.setCursorBlink(false)
+    invertedblink.setCursorBlink(false)
     local sy = nby - h
     local dy = math.abs(scrollY - sy)
     scrollY = sy    
@@ -231,7 +232,7 @@ local function setCursor(nbx, nby)
       hl.put(1, by - scrollY, str)
     end
   elseif ncy < 1 then
-    term.setCursorBlink(false)
+    invertedblink.setCursorBlink(false)
     local sy = nby - 1
     local dy = math.abs(scrollY - sy)
     scrollY = sy
@@ -246,12 +247,12 @@ local function setCursor(nbx, nby)
       hl.put(1, by - scrollY, str)
     end
   end
-  term.setCursor(term.getCursor(), nby - scrollY)
+  invertedblink.setCursor(term.getCursor(), nby - scrollY)
 
   nbx = math.max(1, math.min(unicode.len(line()) + 1, nbx))
   local ncx = nbx - scrollX
   if ncx > w then
-    term.setCursorBlink(false)
+    invertedblink.setCursorBlink(false)
     local sx = nbx - w
     local dx = math.abs(scrollX - sx)
     scrollX = sx
@@ -262,7 +263,7 @@ local function setCursor(nbx, nby)
       hl.put(1 + (w - dx), by - scrollY, str)
     end
   elseif ncx < 1 then
-    term.setCursorBlink(false)
+    invertedblink.setCursorBlink(false)
     local sx = nbx - 1
     local dx = math.abs(scrollX - sx)
     scrollX = sx
@@ -278,7 +279,7 @@ local function setCursor(nbx, nby)
       hl.put(1, by - scrollY, str)
     end
   end
-  term.setCursor(nbx - scrollX, nby - scrollY)
+  invertedblink.setCursor(nbx - scrollX, nby - scrollY)
   
   set_status_color()
   component.gpu.set(w - 9, h + 1, text.padLeft(string.format("%d,%d", nby, nbx), 10))
@@ -522,7 +523,7 @@ local function delete(fullRow)
     return content
   end
   if fullRow then
-    term.setCursorBlink(false)
+    invertedblink.setCursorBlink(false)
     if #buffer > 1 then
       deleteRow(cby)
     else
@@ -531,7 +532,7 @@ local function delete(fullRow)
     end
     setCursor(1, cby)
   elseif cbx <= unicode.len(line()) then
-    term.setCursorBlink(false)
+    invertedblink.setCursorBlink(false)
     buffer[cby] = unicode.sub(line(), 1, cbx - 1) ..
                   unicode.sub(line(), cbx + 1)
     component.gpu.copy(cx + 1, cy, w - cx, 1, -1, 0)
@@ -543,7 +544,7 @@ local function delete(fullRow)
     local str = text.padRight(unicode.sub(buffer[cby], 1 + scrollX), w)
     hl.put(1, cy, str)
   elseif cby < #buffer then
-    term.setCursorBlink(false)
+    invertedblink.setCursorBlink(false)
     local append = deleteRow(cby + 1)
     buffer[cby] = buffer[cby] .. append
     local str = text.padRight(unicode.sub(buffer[cby], 1 + scrollX), w)
@@ -559,7 +560,7 @@ local function insert(value)
   if not value or unicode.len(value) < 1 then
     return
   end
-  term.setCursorBlink(false)
+  invertedblink.setCursorBlink(false)
   local cx, cy = term.getCursor()
   local cbx, cby = getCursor()
   local w, h = getSize()
@@ -580,7 +581,7 @@ local function insert(value)
 end
 
 local function enter()
-  term.setCursorBlink(false)
+  invertedblink.setCursorBlink(false)
   local cx, cy = term.getCursor()
   local cbx, cby = getCursor()
   local w, h = getSize()
@@ -614,7 +615,7 @@ function saveonexit()
   while running do
     local str = "File has changed, save before exit?"
     local opt = " [Y/N]"
-    term.setCursor( string.len(str) + string.len(opt) + 3, h + 1)
+    invertedblink.setCursor( string.len(str) + string.len(opt) + 3, h + 1)
     setStatus(str)    
     local fg = component.gpu.setForeground( colors.red, true)
     local bg = component.gpu.setBackground( config.colors.status.pal.bg, true)
@@ -652,7 +653,7 @@ function gotoline()
   local cbx, cby = getCursor()
   local ibx, iby = cbx, cby
   while running do
-    term.setCursor(7 + unicode.len(gotoText), h + 1)
+    invertedblink.setCursor(7 + unicode.len(gotoText), h + 1)
     local ok = false
     if unicode.len(gotoText) > 0 then
       local num = tonumber(gotoText)
@@ -722,7 +723,7 @@ local function find()
         found = true
       end
     end
-    term.setCursor(7 + unicode.len(findText), h + 1)
+    invertedblink.setCursor(7 + unicode.len(findText), h + 1)
     setStatus("Find: " .. findText)
     if not found and unicode.len(findText) > 0 then
       local fg component.gpu.setForeground( colors.red, true)
@@ -1001,14 +1002,14 @@ while running do
       blink = false
     end
     if blink then
-      term.setCursorBlink(true)
-      term.setCursorBlink(true) -- force toggle to caret
+      invertedblink.setCursorBlink(true)
+      invertedblink.setCursorBlink(true) -- force toggle to caret
     end
   end
 end
 
-term.setCursorBlinkInvert(false)
-term.setCursorBlink(false)
+invertedblink.setCursorBlinkInvert(false)
+invertedblink.setCursorBlink(false)
 local d = component.gpu.getDepth()
 if d == 1 then
   component.gpu.setForeground(0xFFFFFF)
