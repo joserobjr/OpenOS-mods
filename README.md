@@ -1,6 +1,8 @@
 # OpenOS-mods
 An editor software for [OpenComputers](https://github.com/MightyPirates/OpenComputers) that supports syntax highlighting
 
+![Example](http://i.imgur.com/dAf7Yge.png)
+
 This project contains:
 
     Syntax highlighter library.
