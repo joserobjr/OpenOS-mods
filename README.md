@@ -1,21 +1,36 @@
 # OpenOS-mods
-Modifications and additions to [OpenOS](https://github.com/MightyPirates/OpenComputers/tree/master-MC1.8/src/main/resources/assets/opencomputers/loot/OpenOS) that comes with a Minecraft mod called  [OpenComputers](https://github.com/MightyPirates/OpenComputers/tree/master-MC1.8).
+An editor software for [OpenComputers](https://github.com/MightyPirates/OpenComputers) that supports syntax highlighting
 
-These files are from *OpenComputers-MC1.8-1.5.8.19*.
+![Example](http://i.imgur.com/dAf7Yge.png)
 
-Noteable changes:
+This project contains:
 
-    Persistence of aliases.
-    Persistence of environment variables.
-    File size switches for ls command (-s -h -si).
-    Reset color switch to clear command (-c).
     Syntax highlighter library.
     Syntax highlighting version of /bin/edit.lua (cedit).
     Syntax highlighting version of /bin/more.lua (hl).
-    Inverted blinking cursor to term (for cedit).
+    Inverted blinking cursor library (for cedit).
 
 Installation:
 
+    The easiest way (just replaces 12 chars):
+        edit /usr/bin/oppm.lua
+        Scroll down until you find "https://raw.githubusercontent.com/OpenPrograms/openprograms.github.io/master/repos.cfg"
+        Replace that to "https://raw.githubusercontent.com/joserobjr/openprograms.github.io/master/repos.cfg"
+        Ctrl+S, Ctrl+W
+        oppm install cedit
+        You can safely revert the URL on oppm.lua to OpenPrograms now
+    
+    The hard way (write to the config, copy, paste and must respect the lua syntax):
+        Open programs.cfg on this repository
+        Copy everything
+        edit /etc/oppm.cfg
+        Add this to repos:
+            repos={
+                ["joserobjr/OpenOS-mods"] = /*** paste here with INSERT key ***/
+            }
+        Ctrl+S, Ctrl+W
+        oppm install cedit
+        
     Copy files into an allready existing copy of OpenOS, usualy located in
       "%APPDATA%\Roaming\.minecraft\saves\YOUT_WORLD_NAME\opencomputers\YOUR_MAIN_HD"
     where YOUR_WORLD_NAME is the name of your world and YOUR_MAIN_HD is the full address of your main hd.
