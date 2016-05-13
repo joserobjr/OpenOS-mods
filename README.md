@@ -12,7 +12,10 @@ This project contains:
 
 Installation:
 
-    The easiest way (just replaces 12 chars):
+    Automatic way (patches oppm to allow custom repositories defined in /etc/oppm-repo.cfg, register this repo and install cedit):
+        pastebin run vtJBQxj5
+
+    The easy way (just replaces 12 chars):
         edit /usr/bin/oppm.lua
         Scroll down until you find "https://raw.githubusercontent.com/OpenPrograms/openprograms.github.io/master/repos.cfg"
         Replace that to "https://raw.githubusercontent.com/joserobjr/openprograms.github.io/master/repos.cfg"
